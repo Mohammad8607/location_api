@@ -1,13 +1,3 @@
-CREATE TABLE IF NOT EXISTS locations (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    latitude DECIMAL(10, 8) NOT NULL,
-    longitude DECIMAL(11, 8) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Import 533 locations from jordbruk data
-
 INSERT INTO locations (name, latitude, longitude) VALUES ('KJELSNES OLAV - MELKEKYR - 732.5 tonn', 59.03203502, 5.97803056);
 INSERT INTO locations (name, latitude, longitude) VALUES ('KJELSNES OLAV - verpehøner - 322.5 tonn', 59.03203502, 5.97803056);
 INSERT INTO locations (name, latitude, longitude) VALUES ('KJELSNES OLAV - sau - 26.25 tonn', 59.03203502, 5.97803056);
