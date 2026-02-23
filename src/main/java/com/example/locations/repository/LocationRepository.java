@@ -18,9 +18,11 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     // Filter by country
     Page<Location> findByCountryCode(String countryCode, Pageable pageable);
     Page<Location> findByCountry(String country, Pageable pageable);
+    Page<Location> findByCountryCodeAndDriveThrough(String countryCode, String driveThrough, Pageable pageable);
 
     // Filter by city
     Page<Location> findByCityContainingIgnoreCase(String city, Pageable pageable);
+    Page<Location> findByCityContainingIgnoreCaseAndDriveThrough(String city, String driveThrough, Pageable pageable);
 
     // Filter by drive-through
     Page<Location> findByDriveThrough(String driveThrough, Pageable pageable);
@@ -28,6 +30,45 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     // Search by name or city
     Page<Location> findByNameContainingIgnoreCaseOrCityContainingIgnoreCase(
             String name, String city, Pageable pageable);
+
+    // Search by name or city, filtered by drive-through
+    @Query("SELECT l FROM Location l WHERE l.driveThrough = :driveThrough AND (LOWER(l.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(l.city) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Location> searchWithDriveThrough(
+            @Param("q") String q,
+            @Param("driveThrough") String driveThrough,
+            Pageable pageable);
+
+    // Search within a country
+    @Query("SELECT l FROM Location l WHERE l.countryCode = :countryCode AND (LOWER(l.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(l.city) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Location> searchInCountry(
+            @Param("q") String q,
+            @Param("countryCode") String countryCode,
+            Pageable pageable);
+
+    // Search within a country + drive-through
+    @Query("SELECT l FROM Location l WHERE l.countryCode = :countryCode AND l.driveThrough = :driveThrough AND (LOWER(l.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(l.city) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Location> searchInCountryWithDriveThrough(
+            @Param("q") String q,
+            @Param("countryCode") String countryCode,
+            @Param("driveThrough") String driveThrough,
+            Pageable pageable);
+
+    // Search within a city (in a country)
+    @Query("SELECT l FROM Location l WHERE l.countryCode = :countryCode AND LOWER(l.city) LIKE LOWER(CONCAT('%', :cityName, '%')) AND (LOWER(l.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(l.city) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Location> searchInCity(
+            @Param("q") String q,
+            @Param("cityName") String cityName,
+            @Param("countryCode") String countryCode,
+            Pageable pageable);
+
+    // Search within a city + drive-through
+    @Query("SELECT l FROM Location l WHERE l.countryCode = :countryCode AND LOWER(l.city) LIKE LOWER(CONCAT('%', :cityName, '%')) AND l.driveThrough = :driveThrough AND (LOWER(l.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(l.city) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Location> searchInCityWithDriveThrough(
+            @Param("q") String q,
+            @Param("cityName") String cityName,
+            @Param("countryCode") String countryCode,
+            @Param("driveThrough") String driveThrough,
+            Pageable pageable);
 
     // Find locations within a bounding box (for map viewport)
     @Query("SELECT l FROM Location l WHERE " +

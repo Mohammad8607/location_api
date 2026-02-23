@@ -4,6 +4,7 @@ import com.example.locations.model.Location;
 import com.example.locations.repository.LocationRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,13 +25,17 @@ public class LocationController {
         this.repository = repository;
     }
 
-    // GET /api/locations?page=0&size=20
+    // GET /api/locations?page=0&size=20&driveThrough=yes
     @GetMapping
     public Page<Location> getLocations(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "id") String sortBy) {
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(required = false) String driveThrough) {
         size = clampSize(size);
+        if (driveThrough != null) {
+            return repository.findByDriveThrough(driveThrough, PageRequest.of(page, size, Sort.by(sortBy)));
+        }
         return repository.findAll(PageRequest.of(page, size, Sort.by(sortBy)));
     }
 
@@ -42,36 +47,65 @@ public class LocationController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // GET /api/locations/country/DE?page=0&size=20
+    // GET /api/locations/country/DE?page=0&size=20&driveThrough=yes
     @GetMapping("/country/{countryCode}")
     public Page<Location> getByCountry(
             @PathVariable String countryCode,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String driveThrough) {
         size = clampSize(size);
+        if (driveThrough != null) {
+            return repository.findByCountryCodeAndDriveThrough(
+                    countryCode.toUpperCase(), driveThrough,
+                    PageRequest.of(page, size, Sort.by("city", "name")));
+        }
         return repository.findByCountryCode(
                 countryCode.toUpperCase(),
                 PageRequest.of(page, size, Sort.by("city", "name")));
     }
 
-    // GET /api/locations/search?q=berlin&page=0&size=20
+    // GET /api/locations/search?q=berlin&page=0&size=20&countryCode=DE&city=Berlin&driveThrough=yes
     @GetMapping("/search")
     public Page<Location> search(
             @RequestParam String q,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String countryCode,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String driveThrough) {
         size = clampSize(size);
+        String cc = countryCode != null ? countryCode.toUpperCase() : null;
+        String dt = driveThrough;
+        Pageable pageable = PageRequest.of(page, size);
+
+        if (cc != null && city != null && dt != null) {
+            return repository.searchInCityWithDriveThrough(q, city, cc, dt, pageable);
+        } else if (cc != null && city != null) {
+            return repository.searchInCity(q, city, cc, pageable);
+        } else if (cc != null && dt != null) {
+            return repository.searchInCountryWithDriveThrough(q, cc, dt, pageable);
+        } else if (cc != null) {
+            return repository.searchInCountry(q, cc, pageable);
+        } else if (dt != null) {
+            return repository.searchWithDriveThrough(q, dt, pageable);
+        }
         return repository.findByNameContainingIgnoreCaseOrCityContainingIgnoreCase(
-                q, q, PageRequest.of(page, size));
+                q, q, pageable);
     }
 
-    // GET /api/locations/city?name=Paris&page=0&size=20
+    // GET /api/locations/city?name=Paris&page=0&size=20&driveThrough=yes
     @GetMapping("/city")
     public Page<Location> getByCity(
             @RequestParam String name,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String driveThrough) {
         size = clampSize(size);
+        if (driveThrough != null) {
+            return repository.findByCityContainingIgnoreCaseAndDriveThrough(
+                    name, driveThrough, PageRequest.of(page, size, Sort.by("name")));
+        }
         return repository.findByCityContainingIgnoreCase(
                 name, PageRequest.of(page, size, Sort.by("name")));
     }
