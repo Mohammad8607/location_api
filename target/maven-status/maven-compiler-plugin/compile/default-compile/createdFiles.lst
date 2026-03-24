@@ -1,0 +1,4 @@
+com\example\locations\model\Location.class
+com\example\locations\controller\LocationController.class
+com\example\locations\LocationsApplication.class
+com\example\locations\repository\LocationRepository.class

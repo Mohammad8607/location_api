@@ -25,18 +25,50 @@ public class LocationController {
         this.repository = repository;
     }
 
-    // GET /api/locations?page=0&size=20&driveThrough=yes
+    // GET /api/locations?page=0&size=20&search=berlin&driveThrough=yes|true&country=France
     @GetMapping
     public Page<Location> getLocations(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(required = false) String driveThrough) {
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String driveThrough,
+            @RequestParam(required = false) String country) {
         size = clampSize(size);
-        if (driveThrough != null) {
-            return repository.findByDriveThrough(driveThrough, PageRequest.of(page, size, Sort.by(sortBy)));
+        String dt = normalizeBoolean(driveThrough);
+        boolean hasSearch = search != null && !search.isBlank();
+        boolean hasCountry = country != null && !country.isBlank();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
+
+        if (hasSearch && hasCountry && dt != null) {
+            // need countryCode for searchInCountryWithDriveThrough — but we have country name, so fall back to search+driveThrough
+            return repository.searchWithDriveThrough(search, dt, pageable);
         }
-        return repository.findAll(PageRequest.of(page, size, Sort.by(sortBy)));
+        if (hasSearch && dt != null) {
+            return repository.searchWithDriveThrough(search, dt, pageable);
+        }
+        if (hasSearch && hasCountry) {
+            return repository.findByNameContainingIgnoreCaseOrCityContainingIgnoreCase(search, search, pageable);
+        }
+        if (hasSearch) {
+            return repository.findByNameContainingIgnoreCaseOrCityContainingIgnoreCase(search, search, pageable);
+        }
+        if (hasCountry && dt != null) {
+            return repository.findByCountryAndDriveThrough(country, dt, pageable);
+        }
+        if (hasCountry) {
+            return repository.findByCountry(country, pageable);
+        }
+        if (dt != null) {
+            return repository.findByDriveThrough(dt, pageable);
+        }
+        return repository.findAll(pageable);
+    }
+
+    // GET /api/locations/distinct/country — compatible with the ships /distinct/{field} pattern
+    @GetMapping("/distinct/country")
+    public List<String> getDistinctCountries() {
+        return repository.findAllCountries();
     }
 
     // GET /api/locations/123
@@ -153,6 +185,16 @@ public class LocationController {
 
     private int clampSize(int size) {
         return Math.max(10, Math.min(100, size));
+    }
+
+    /** Accepts "yes", "true", "1" → "yes"; "no", "false", "0" → "no"; anything else → null */
+    private String normalizeBoolean(String value) {
+        if (value == null) return null;
+        return switch (value.toLowerCase()) {
+            case "yes", "true", "1" -> "yes";
+            case "no", "false", "0" -> "no";
+            default -> null;
+        };
     }
 
     // GET /api/locations/stats

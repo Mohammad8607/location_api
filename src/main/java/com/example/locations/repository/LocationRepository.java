@@ -20,6 +20,8 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     Page<Location> findByCountry(String country, Pageable pageable);
     Page<Location> findByCountryCodeAndDriveThrough(String countryCode, String driveThrough, Pageable pageable);
 
+    Page<Location> findByCountryAndDriveThrough(String country, String driveThrough, Pageable pageable);
+
     // Filter by city
     Page<Location> findByCityContainingIgnoreCase(String city, Pageable pageable);
     Page<Location> findByCityContainingIgnoreCaseAndDriveThrough(String city, String driveThrough, Pageable pageable);
